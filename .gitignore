@@ -1,3 +1,5 @@
-node_modules/ 
-.env
+hotel-app/backend/.env
+hotel-app/frontend/.env
+hotel-app/backend/node_modules/
+hotel-app/frontend/node_modules/
 
