@@ -8,7 +8,24 @@ import authRouter from "./routes/auth.js";
 import cron from "node-cron";
 import pool from "./db.js";
 
-// Runs every day at midnight
+const app = express();
+const PORT = process.env.PORT || 3001;
+
+app.use(cors({
+  origin: process.env.APP_URL || "http://localhost:5173",
+}));
+app.use(express.json());
+
+// Routes
+app.use("/api/rooms", roomsRouter);
+app.use("/api/bookings", bookingsRouter);
+app.use("/api/stats", statsRouter);
+app.use("/api/auth", authRouter);
+
+// Health check
+app.get("/api/health", (req, res) => res.json({ status: "ok" }));
+
+// Runs every hour
 cron.schedule("0 * * * *", async () => {
   try {
     const today = new Date().toISOString().slice(0, 10);
@@ -40,25 +57,6 @@ cron.schedule("0 * * * *", async () => {
   }
 })();
 
-const PORT = process.env.PORT || 3001;
-
-app.use(cors({
-  origin: process.env.APP_URL || "http://localhost:5173",
-}));
-
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Hotel API running on port ${PORT}`);
-});
-
-// Routes
-app.use("/api/rooms", roomsRouter);
-app.use("/api/bookings", bookingsRouter);
-app.use("/api/stats", statsRouter);
-app.use("/api/auth", authRouter);
-
-// Health check
-app.get("/api/health", (req, res) => res.json({ status: "ok" }));
-
-app.listen(PORT, () => {
-  console.log(`Hotel API running at http://localhost:${PORT}`);
 });
