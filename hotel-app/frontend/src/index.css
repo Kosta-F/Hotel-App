@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+@media (max-width: 640px) {
+  .desktop-nav {
+    display: none !important;
+  }
+  .hamburger {
+    display: flex !important;
+  }
+}
+
+:root {
+  --font-display: 'Cormorant Garamond', serif;
+  --font-body: 'DM Sans', sans-serif;
+
+  --color-bg: #faf9f7;
+  --color-surface: #ffffff;
+  --color-surface-2: #f4f2ee;
+  --color-border: #e8e4dc;
+  --color-border-strong: #d0cab8;
+
+  --color-text-primary: #1a1814;
+  --color-text-secondary: #6b6456;
+  --color-text-muted: #a09888;
+
+  --color-gold: #b8965a;
+  --color-gold-light: #f5edde;
+  --color-gold-dark: #8a6e3e;
+
+  --color-occupied: #c9503a;
+  --color-occupied-bg: #fdf0ee;
+  --color-checkin: #2e7d5e;
+  --color-checkin-bg: #edf7f3;
+  --color-checkout: #5b7fa6;
+  --color-checkout-bg: #edf2f8;
+  --color-reserved: #b8965a;
+  --color-reserved-bg: #f9f2e6;
+  --color-free: #e8e4dc;
+  --color-free-text: #a09888;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  --shadow-sm: 0 1px 3px rgba(26,24,20,0.06);
+  --shadow-md: 0 4px 16px rgba(26,24,20,0.08);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root {
+  height: 100%;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--color-text-primary);
+  background: var(--color-bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+button { font-family: var(--font-body); cursor: pointer; }
+input, select { font-family: var(--font-body); }
+a { text-decoration: none; color: inherit; }
