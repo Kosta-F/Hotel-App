@@ -40,11 +40,15 @@ cron.schedule("0 * * * *", async () => {
   }
 })();
 
-const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
-app.use(cors({ origin: "http://localhost:5173" }));
-app.use(express.json());
+app.use(cors({
+  origin: process.env.APP_URL || "http://localhost:5173",
+}));
+
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Hotel API running on port ${PORT}`);
+});
 
 // Routes
 app.use("/api/rooms", roomsRouter);
