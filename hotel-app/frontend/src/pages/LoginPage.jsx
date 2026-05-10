@@ -25,7 +25,11 @@ export default function LoginPage() {
       if (!res.ok) throw new Error(data.error || "Login failed");
       localStorage.setItem("user", JSON.stringify(data.user));
       localStorage.setItem("token", data.token);
-      navigate("/");
+      if (!data.user.verified) {
+        navigate("/");
+      } else {
+        navigate("/");
+      }
     } catch (err) {
       setError(err.message);
     } finally {

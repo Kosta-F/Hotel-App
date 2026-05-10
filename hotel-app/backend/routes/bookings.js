@@ -1,6 +1,7 @@
 import { Router } from "express";
 import pool from "../db.js";
 import { requireAuth, optionalAuth } from "../middleware/auth.js";
+import { sendBookingConfirmationEmail, sendCancellationEmail } from "../email.js";
 
 const router = Router();
 
@@ -162,12 +163,29 @@ router.post("/", requireAuth, async (req, res) => {
       [bookingId, roomId, userId, guestName, checkIn, checkOut, total]
     );
 
+    // Send confirmation email
+    try {
+      const [userRows] = await pool.query("SELECT email, full_name FROM users WHERE id = ?", [userId]);
+      const [roomRows2] = await pool.query("SELECT * FROM rooms WHERE id = ?", [roomId]);
+      if (userRows.length > 0) {
+        await sendBookingConfirmationEmail(
+          userRows[0].email,
+          userRows[0].full_name,
+          { id: bookingId, roomId, checkIn, checkOut, total },
+          roomRows2[0]
+        );
+      }
+    } catch (emailErr) {
+      console.error("Email error:", emailErr);
+    }
+
     res.status(201).json({ id: bookingId, roomId, userId, checkIn, checkOut, total, status: "reserved", paid: false });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to create booking." });
   }
 });
+
 
 // PATCH /api/bookings/:id/status
 router.patch("/:id/status", async (req, res) => {
@@ -182,6 +200,36 @@ router.patch("/:id/status", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to update status." });
+  }
+
+    // Send cancellation email if cancelled
+  if (status === "cancelled") {
+    try {
+      const [bookingRows] = await pool.query(
+        `SELECT b.*, u.email, u.full_name, r.name as room_name 
+        FROM bookings b 
+        JOIN users u ON b.user_id = u.id 
+        JOIN rooms r ON b.room_id = r.id 
+        WHERE b.id = ?`,
+        [req.params.id]
+      );
+      if (bookingRows.length > 0) {
+        const b = bookingRows[0];
+        await sendCancellationEmail(
+          b.email,
+          b.full_name,
+          {
+            id: b.id,
+            roomId: b.room_id,
+            checkIn: b.check_in.toISOString().slice(0, 10),
+            checkOut: b.check_out.toISOString().slice(0, 10),
+          },
+          { name: b.room_name }
+        );
+      }
+    } catch (emailErr) {
+      console.error("Email error:", emailErr);
+    }
   }
 });
 

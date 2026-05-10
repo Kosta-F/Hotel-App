@@ -2,8 +2,16 @@ import { Router } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import pool from "../db.js";
+import {
+  sendVerificationEmail,
+  sendPasswordChangedEmail,
+} from "../email.js";
 
 const router = Router();
+
+function generateCode() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
 
 // POST /api/auth/signup
 router.post("/signup", async (req, res) => {
@@ -12,29 +20,90 @@ router.post("/signup", async (req, res) => {
     return res.status(400).json({ error: "All fields are required." });
   }
   try {
-    const [existing] = await pool.query(
-      "SELECT id FROM users WHERE email = ?", [email]
-    );
+    const [existing] = await pool.query("SELECT id FROM users WHERE email = ?", [email]);
     if (existing.length > 0) {
       return res.status(409).json({ error: "An account with this email already exists." });
     }
     const hashedPassword = await bcrypt.hash(password, 10);
+    const code = generateCode();
+    const expires = new Date(Date.now() + 15 * 60 * 1000);
+
     const [result] = await pool.query(
-      "INSERT INTO users (full_name, email, password) VALUES (?, ?, ?)",
-      [fullName, email, hashedPassword]
+      "INSERT INTO users (full_name, email, password, verified, verification_code, verification_expires) VALUES (?, ?, ?, 0, ?, ?)",
+      [fullName, email, hashedPassword, code, expires]
     );
-    const token = jwt.sign(
-      { id: result.insertId, email },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
+
+    try {
+      await sendVerificationEmail(email, fullName, code);
+      console.log("Verification email sent to:", email);
+    } catch (emailErr) {
+      console.error("Verification email error:", emailErr);
+    }
+
+    const token = jwt.sign({ id: result.insertId, email }, process.env.JWT_SECRET, { expiresIn: "7d" });
     res.status(201).json({
-      user: { id: result.insertId, fullName, email },
+      user: { id: result.insertId, fullName, email, verified: false },
       token,
+      message: "Please check your email to verify your account.",
     });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Something went wrong. Please try again." });
+  }
+});
+
+// POST /api/auth/verify
+router.post("/verify", async (req, res) => {
+  const { email, code } = req.body;
+  try {
+    const [rows] = await pool.query("SELECT * FROM users WHERE email = ?", [email]);
+    if (rows.length === 0) return res.status(404).json({ error: "User not found." });
+    const user = rows[0];
+
+    if (user.verified) return res.status(400).json({ error: "Account already verified." });
+    if (user.verification_code !== code) return res.status(400).json({ error: "Incorrect code." });
+    if (new Date() > new Date(user.verification_expires)) {
+      return res.status(400).json({ error: "Code has expired. Please request a new one." });
+    }
+
+    await pool.query(
+      "UPDATE users SET verified = 1, verification_code = NULL, verification_expires = NULL WHERE id = ?",
+      [user.id]
+    );
+    res.json({ success: true, message: "Account verified!" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Something went wrong." });
+  }
+});
+
+// POST /api/auth/resend-verification
+router.post("/resend-verification", async (req, res) => {
+  const { email } = req.body;
+  try {
+    const [rows] = await pool.query("SELECT * FROM users WHERE email = ?", [email]);
+    if (rows.length === 0) return res.status(404).json({ error: "User not found." });
+    const user = rows[0];
+    if (user.verified) return res.status(400).json({ error: "Account already verified." });
+
+    const code = generateCode();
+    const expires = new Date(Date.now() + 15 * 60 * 1000);
+    await pool.query(
+      "UPDATE users SET verification_code = ?, verification_expires = ? WHERE id = ?",
+      [code, expires, user.id]
+    );
+
+    try {
+      await sendVerificationEmail(email, user.full_name, code);
+      console.log("Resend verification email sent to:", email);
+    } catch (emailErr) {
+      console.error("Resend email error:", emailErr);
+    }
+
+    res.json({ success: true, message: "Verification code resent." });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Something went wrong." });
   }
 });
 
@@ -45,24 +114,19 @@ router.post("/login", async (req, res) => {
     return res.status(400).json({ error: "Email and password are required." });
   }
   try {
-    const [rows] = await pool.query(
-      "SELECT * FROM users WHERE email = ?", [email]
-    );
-    if (rows.length === 0) {
-      return res.status(401).json({ error: "Invalid email or password." });
-    }
+    const [rows] = await pool.query("SELECT * FROM users WHERE email = ?", [email]);
+    if (rows.length === 0) return res.status(401).json({ error: "Invalid email or password." });
     const user = rows[0];
     const match = await bcrypt.compare(password, user.password);
-    if (!match) {
-      return res.status(401).json({ error: "Invalid email or password." });
-    }
+    if (!match) return res.status(401).json({ error: "Invalid email or password." });
+
     const token = jwt.sign(
       { id: user.id, email: user.email },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
     res.json({
-      user: { id: user.id, fullName: user.full_name, email: user.email },
+      user: { id: user.id, fullName: user.full_name, email: user.email, verified: user.verified === 1 },
       token,
     });
   } catch (err) {
@@ -85,7 +149,6 @@ router.post("/admin", (req, res) => {
 router.patch("/update-profile", async (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ error: "Not authenticated." });
-  
   const token = authHeader.split(" ")[1];
   let userId;
   try {
@@ -94,25 +157,27 @@ router.patch("/update-profile", async (req, res) => {
   } catch {
     return res.status(401).json({ error: "Invalid token." });
   }
-
   const { fullName, currentPassword, newPassword } = req.body;
-
   try {
     const [rows] = await pool.query("SELECT * FROM users WHERE id = ?", [userId]);
     if (rows.length === 0) return res.status(404).json({ error: "User not found." });
     const user = rows[0];
 
-    // If changing password, verify current password
     if (newPassword) {
       if (!currentPassword) return res.status(400).json({ error: "Current password is required." });
       const match = await bcrypt.compare(currentPassword, user.password);
       if (!match) return res.status(401).json({ error: "Current password is incorrect." });
       const hashed = await bcrypt.hash(newPassword, 10);
       await pool.query("UPDATE users SET full_name = ?, password = ? WHERE id = ?", [fullName, hashed, userId]);
+      try {
+        await sendPasswordChangedEmail(user.email, user.full_name);
+        console.log("Password changed email sent to:", user.email);
+      } catch (emailErr) {
+        console.error("Password email error:", emailErr);
+      }
     } else {
       await pool.query("UPDATE users SET full_name = ? WHERE id = ?", [fullName, userId]);
     }
-
     res.json({ success: true, fullName });
   } catch (err) {
     console.error(err);
