@@ -14,10 +14,12 @@ const PORT = process.env.PORT || 3001;
 app.use(cors({
   origin: [
     "http://localhost:5173",
-    "https://hotel-app-seven-beta.vercel.app/"
+    "https://hotel-app-seven-beta.vercel.app",
   ],
   credentials: true,
 }));
+
+app.use(express.json());
 
 // Routes
 app.use("/api/rooms", roomsRouter);
