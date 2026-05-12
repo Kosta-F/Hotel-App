@@ -39,7 +39,8 @@ export default function SignupPage() {
       if (!res.ok) throw new Error(data.error || "Signup failed");
       localStorage.setItem("user", JSON.stringify(data.user));
       localStorage.setItem("token", data.token);
-      navigate("/verify");
+      //navigate("/verify");
+      navigate("/");
     } catch (err) {
       setError(err.message);
     } finally {
