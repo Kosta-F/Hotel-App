@@ -68,7 +68,8 @@ export default function AccountPage() {
     }
     setProfileLoading(true);
     try {
-      const res = await fetch("/api/auth/update-profile", {
+      const apiUrl = import.meta.env.VITE_API_URL || "";
+      const res = await fetch(`${apiUrl}/api/auth/update-profile`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",

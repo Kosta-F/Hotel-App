@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+const API_URL = import.meta.env.VITE_API_URL || "";
+
 export default function VerifyPage() {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem("user"));
@@ -17,7 +19,7 @@ export default function VerifyPage() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/auth/verify", {
+      const res = await fetch(`${API_URL}/api/auth/verify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: user?.email, code }),
@@ -36,7 +38,7 @@ export default function VerifyPage() {
 
   const handleResend = async () => {
     try {
-      await fetch("/api/auth/resend-verification", {
+      await fetch(`${API_URL}/api/auth/resend-verification`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: user?.email }),

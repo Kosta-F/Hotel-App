@@ -52,7 +52,8 @@ const handleNotesChange = useCallback(async (id, notes) => {
 
 const handleUnlock = async () => {
   try {
-    const res = await fetch("/api/auth/admin", {
+    const apiUrl = import.meta.env.VITE_API_URL || "";
+    const res = await fetch(`${apiUrl}/api/auth/admin`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ password: input }),
