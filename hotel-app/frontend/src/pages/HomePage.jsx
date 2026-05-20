@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useFetch } from "../hooks/useFetch";
 import { api } from "../lib/api";
 import RoomCard from "../components/user/RoomCard";
@@ -9,6 +10,7 @@ const TYPES = ["All", "Standard Studio", "Studio", "Studio Deluxe", "One Bedroom
 const today = new Date().toISOString().slice(0, 10);
 
 export default function HomePage() {
+  const { t, i18n } = useTranslation();
   const [typeFilter, setTypeFilter] = useState("All");
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
@@ -17,12 +19,9 @@ export default function HomePage() {
   const [checkOut, setCheckOut] = useState("");
 
   const { data: rooms } = useFetch(
-  () => api.getRooms({
-    checkIn: checkIn || today,
-    checkOut: checkOut || today,
-  }),
-  [checkIn, checkOut]
-);
+    () => api.getRooms({ checkIn: checkIn || today, checkOut: checkOut || today }),
+    [checkIn, checkOut]
+  );
 
   const filtered = rooms
     ? typeFilter === "All" ? rooms : rooms.filter(r => r.type === typeFilter)
@@ -44,7 +43,7 @@ export default function HomePage() {
           textTransform: "uppercase",
           marginBottom: 12,
         }}>
-          Where luxury meets comfort
+          {t("home.hero.tagline")}
         </p>
         <h1 style={{
           fontFamily: "'Cormorant Garamond', serif",
@@ -54,11 +53,11 @@ export default function HomePage() {
           marginBottom: 16,
           color: "#1a1814",
         }}>
-          Find your perfect stay<br />
-          <em style={{ fontStyle: "italic", color: "#8a6e3e" }}>at Aurelia</em>
+          {t("home.hero.title")}<br />
+          <em style={{ fontStyle: "italic", color: "#8a6e3e" }}>{t("home.hero.titleAccent")}</em>
         </h1>
         <p style={{ fontSize: 15, color: "#6b6456", maxWidth: 480, margin: "0 auto 28px" }}>
-          Luxury rooms in the heart of the city. Book directly for the best rates.
+          {t("home.hero.subtitle")}
         </p>
 
         {/* Date picker */}
@@ -72,7 +71,7 @@ export default function HomePage() {
         }}>
           <div style={{ padding: "10px 16px", borderRight: "0.5px solid #e8e4dc" }}>
             <div style={{ fontSize: 10, color: "#a09888", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 3 }}>
-              Check-in
+              {t("home.dates.checkIn")}
             </div>
             <input
               type="date"
@@ -92,7 +91,7 @@ export default function HomePage() {
           </div>
           <div style={{ padding: "10px 16px" }}>
             <div style={{ fontSize: 10, color: "#a09888", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 3 }}>
-              Check-out
+              {t("home.dates.checkOut")}
             </div>
             <input
               type="date"
@@ -121,14 +120,14 @@ export default function HomePage() {
                 fontFamily: "'DM Sans', sans-serif",
               }}
             >
-              Clear
+              {t("home.dates.clear")}
             </button>
           )}
         </div>
 
         {checkIn && checkOut && (
           <p style={{ fontSize: 12, color: "#a09888", marginTop: 10 }}>
-            Showing availability for {checkIn} → {checkOut}
+            {t("home.dates.availability", { checkIn, checkOut })}
           </p>
         )}
       </div>
@@ -148,18 +147,18 @@ export default function HomePage() {
 
       {/* Filter bar */}
       <div style={{ display: "flex", gap: 8, marginBottom: 24, flexWrap: "wrap", alignItems: "center" }}>
-        <span style={{ fontSize: 12, color: "#a09888", marginRight: 4 }}>Room type:</span>
-        {TYPES.map(t => (
-          <button key={t} onClick={() => setTypeFilter(t)} style={{
+        <span style={{ fontSize: 12, color: "#a09888", marginRight: 4 }}>{t("home.filter.label")}</span>
+        {TYPES.map(type => (
+          <button key={type} onClick={() => setTypeFilter(type)} style={{
             padding: "5px 14px", fontSize: 13,
-            border: `1px solid ${typeFilter === t ? "#b8965a" : "#e8e4dc"}`,
+            border: `1px solid ${typeFilter === type ? "#b8965a" : "#e8e4dc"}`,
             borderRadius: 4,
-            background: typeFilter === t ? "#f5edde" : "#ffffff",
-            color: typeFilter === t ? "#8a6e3e" : "#6b6456",
+            background: typeFilter === type ? "#f5edde" : "#ffffff",
+            color: typeFilter === type ? "#8a6e3e" : "#6b6456",
             cursor: "pointer", transition: "all 0.15s",
             fontFamily: "'DM Sans', sans-serif",
           }}>
-            {t}
+            {t(`home.filter.types.${type}`)}
           </button>
         ))}
       </div>
@@ -167,14 +166,14 @@ export default function HomePage() {
       {/* Rooms grid */}
       {!rooms ? (
         <div style={{ textAlign: "center", padding: "48px", color: "#a09888", fontSize: 13 }}>
-          Loading rooms…
+          {t("home.rooms.loading")}
         </div>
       ) : filtered.length === 0 ? (
         <div style={{ textAlign: "center", padding: "48px", color: "#a09888", fontSize: 13 }}>
-          No rooms found for this type.
+          {t("home.rooms.empty")}
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 16 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
           {filtered.map(room => (
             <RoomCard key={room.id} room={room} onView={setViewingRoom} />
           ))}
@@ -188,7 +187,7 @@ export default function HomePage() {
           initialCheckIn={checkIn}
           initialCheckOut={checkOut}
           onClose={() => setSelectedRoom(null)}
-          onSuccess={(b) => setSuccessMsg(`Booking confirmed! Room ${b.roomId} · Ref: ${b.id}`)}
+          onSuccess={(b) => setSuccessMsg(t("home.booking.success", { roomId: b.roomId, ref: b.id }))}
         />
       )}
 

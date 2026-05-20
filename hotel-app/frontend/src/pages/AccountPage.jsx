@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useFetch } from "../hooks/useFetch";
 import { api } from "../lib/api";
 
 const STATUS_STYLES = {
-  "reserved":    { bg: "#f9f2e6", text: "#b8965a", label: "Reserved" },
-  "checked-in":  { bg: "#edf7f3", text: "#2e7d5e", label: "Checked in" },
-  "checked-out": { bg: "#f4f2ee", text: "#a09888", label: "Completed" },
-  "cancelled":   { bg: "#fdf0ee", text: "#c9503a", label: "Cancelled" },
+  "reserved":    { bg: "#f9f2e6", text: "#b8965a" },
+  "checked-in":  { bg: "#edf7f3", text: "#2e7d5e" },
+  "checked-out": { bg: "#f4f2ee", text: "#a09888" },
+  "cancelled":   { bg: "#fdf0ee", text: "#c9503a" },
 };
 
 function getInitials(fullName) {
@@ -26,6 +27,7 @@ function useIsMobile() {
 }
 
 export default function AccountPage() {
+  const { t } = useTranslation();
   const user = JSON.parse(localStorage.getItem("user"));
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -42,7 +44,7 @@ export default function AccountPage() {
   const myBookings = allBookings?.filter(b => Number(b.userId) === Number(user?.id)) || [];
 
   const handleCancel = async (bookingId) => {
-    if (!window.confirm("Are you sure you want to cancel this booking?")) return;
+    if (!window.confirm(t("account.reservations.cancelConfirm"))) return;
     try {
       await api.updateBookingStatus(bookingId, "cancelled");
       refetch();
@@ -59,11 +61,11 @@ export default function AccountPage() {
     setProfileMsg(null);
     setProfileError(null);
     if (profileForm.newPassword && profileForm.newPassword !== profileForm.confirmPassword) {
-      setProfileError("New passwords do not match.");
+      setProfileError(t("account.profile.errors.passwordMismatch"));
       return;
     }
     if (profileForm.newPassword && profileForm.newPassword.length < 6) {
-      setProfileError("New password must be at least 6 characters.");
+      setProfileError(t("account.profile.errors.passwordTooShort"));
       return;
     }
     setProfileLoading(true);
@@ -85,7 +87,7 @@ export default function AccountPage() {
       if (!res.ok) throw new Error(data.error);
       const updatedUser = { ...user, fullName: profileForm.fullName };
       localStorage.setItem("user", JSON.stringify(updatedUser));
-      setProfileMsg("Profile updated successfully!");
+      setProfileMsg(t("account.profile.success"));
       setProfileForm(f => ({ ...f, currentPassword: "", newPassword: "", confirmPassword: "" }));
     } catch (e) {
       setProfileError(e.message);
@@ -106,18 +108,20 @@ export default function AccountPage() {
 
   if (!user) return null;
 
+  const TABS = [
+    { key: "Reservations", label: t("account.tabs.reservations") },
+    { key: "Profile",      label: t("account.tabs.profile") },
+  ];
+
   return (
     <div style={{ maxWidth: 960, margin: "0 auto", padding: isMobile ? "16px 12px" : "28px 24px" }}>
 
-      {/* Mobile: profile header at top */}
+      {/* Mobile: profile header */}
       {isMobile && (
         <div style={{
           display: "flex", alignItems: "center", gap: 14,
-          marginBottom: 20,
-          background: "#ffffff",
-          border: "0.5px solid #e8e4dc",
-          borderRadius: 12,
-          padding: "16px",
+          marginBottom: 20, background: "#ffffff",
+          border: "0.5px solid #e8e4dc", borderRadius: 12, padding: "16px",
         }}>
           <div style={{
             width: 44, height: 44, borderRadius: "50%",
@@ -136,56 +140,40 @@ export default function AccountPage() {
               {user.email}
             </div>
           </div>
-          <button
-            onClick={handleSignOut}
-            style={{
-              padding: "5px 10px", fontSize: 12,
-              border: "0.5px solid #c9503a", borderRadius: 4,
-              background: "transparent", color: "#c9503a",
-              cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
-              flexShrink: 0,
-            }}
-          >
-            Sign out
+          <button onClick={handleSignOut} style={{
+            padding: "5px 10px", fontSize: 12,
+            border: "0.5px solid #c9503a", borderRadius: 4,
+            background: "transparent", color: "#c9503a",
+            cursor: "pointer", fontFamily: "'DM Sans', sans-serif", flexShrink: 0,
+          }}>
+            {t("account.signOut")}
           </button>
         </div>
       )}
 
       {/* Mobile: tab bar */}
       {isMobile && (
-        <div style={{
-          display: "flex", gap: 4, marginBottom: 16,
-          borderBottom: "1px solid #e8e4dc", paddingBottom: 0,
-        }}>
-          {["Reservations", "Profile"].map(tab => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              style={{
-                flex: 1, padding: "10px",
-                border: "none",
-                borderBottom: activeTab === tab ? "2px solid #b8965a" : "2px solid transparent",
-                background: "transparent",
-                fontSize: 13, fontFamily: "'DM Sans', sans-serif",
-                color: activeTab === tab ? "#1a1814" : "#a09888",
-                cursor: "pointer", fontWeight: activeTab === tab ? 500 : 400,
-                marginBottom: -1,
-              }}
-            >
-              {tab}
+        <div style={{ display: "flex", gap: 4, marginBottom: 16, borderBottom: "1px solid #e8e4dc" }}>
+          {TABS.map(({ key, label }) => (
+            <button key={key} onClick={() => setActiveTab(key)} style={{
+              flex: 1, padding: "10px", border: "none",
+              borderBottom: activeTab === key ? "2px solid #b8965a" : "2px solid transparent",
+              background: "transparent", fontSize: 13,
+              fontFamily: "'DM Sans', sans-serif",
+              color: activeTab === key ? "#1a1814" : "#a09888",
+              cursor: "pointer", fontWeight: activeTab === key ? 500 : 400,
+              marginBottom: -1,
+            }}>
+              {label}
             </button>
           ))}
         </div>
       )}
 
-      {/* Desktop: sidebar + main layout */}
+      {/* Desktop: sidebar + main */}
       {!isMobile ? (
         <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: 24, alignItems: "start" }}>
-          {/* Sidebar */}
-          <div style={{
-            background: "#ffffff", border: "0.5px solid #e8e4dc",
-            borderRadius: 12, padding: "24px 20px",
-          }}>
+          <div style={{ background: "#ffffff", border: "0.5px solid #e8e4dc", borderRadius: 12, padding: "24px 20px" }}>
             <div style={{
               width: 52, height: 52, borderRadius: "50%",
               background: "#f5edde", border: "0.5px solid #d0cab8",
@@ -200,14 +188,14 @@ export default function AccountPage() {
               <div style={{ fontSize: 12, color: "#a09888", marginTop: 2 }}>{user.email}</div>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              {["Reservations", "Profile"].map(item => (
-                <div key={item} onClick={() => setActiveTab(item)} style={{
+              {TABS.map(({ key, label }) => (
+                <div key={key} onClick={() => setActiveTab(key)} style={{
                   padding: "8px 10px", borderRadius: 4, fontSize: 13,
-                  color: activeTab === item ? "#1a1814" : "#6b6456",
-                  background: activeTab === item ? "#f4f2ee" : "transparent",
+                  color: activeTab === key ? "#1a1814" : "#6b6456",
+                  background: activeTab === key ? "#f4f2ee" : "transparent",
                   cursor: "pointer",
                 }}>
-                  {item}
+                  {label}
                 </div>
               ))}
               <div onClick={handleSignOut} style={{
@@ -215,12 +203,11 @@ export default function AccountPage() {
                 fontSize: 13, color: "#c9503a",
                 cursor: "pointer", marginTop: 8,
               }}>
-                Sign out
+                {t("account.signOut")}
               </div>
             </div>
           </div>
 
-          {/* Main content */}
           <MainContent
             activeTab={activeTab}
             upcoming={upcoming}
@@ -237,7 +224,6 @@ export default function AccountPage() {
           />
         </div>
       ) : (
-        /* Mobile: just main content */
         <MainContent
           activeTab={activeTab}
           upcoming={upcoming}
@@ -258,20 +244,21 @@ export default function AccountPage() {
 }
 
 function MainContent({ activeTab, upcoming, past, handleCancel, profileForm, setProfileForm, profileMsg, profileError, profileLoading, handleProfileSave, user, isMobile }) {
+  const { t } = useTranslation();
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {activeTab === "Reservations" && (
         <>
           <div style={cardStyle}>
-            <SectionTitle>Upcoming stays</SectionTitle>
+            <SectionTitle>{t("account.reservations.upcoming")}</SectionTitle>
             {upcoming.length === 0 ? (
-              <p style={{ fontSize: 13, color: "#a09888" }}>No upcoming stays.</p>
+              <p style={{ fontSize: 13, color: "#a09888" }}>{t("account.reservations.noUpcoming")}</p>
             ) : upcoming.map(b => <BookingRow key={b.id} booking={b} onCancel={handleCancel} isMobile={isMobile} />)}
           </div>
           <div style={cardStyle}>
-            <SectionTitle>Past stays</SectionTitle>
+            <SectionTitle>{t("account.reservations.past")}</SectionTitle>
             {past.length === 0 ? (
-              <p style={{ fontSize: 13, color: "#a09888" }}>No past stays yet.</p>
+              <p style={{ fontSize: 13, color: "#a09888" }}>{t("account.reservations.noPast")}</p>
             ) : past.map(b => <BookingRow key={b.id} booking={b} isMobile={isMobile} />)}
           </div>
         </>
@@ -279,7 +266,7 @@ function MainContent({ activeTab, upcoming, past, handleCancel, profileForm, set
 
       {activeTab === "Profile" && (
         <div style={cardStyle}>
-          <SectionTitle>Profile</SectionTitle>
+          <SectionTitle>{t("account.tabs.profile")}</SectionTitle>
           {profileMsg && (
             <div style={{ padding: "10px 14px", marginBottom: 16, background: "#edf7f3", color: "#2e7d5e", borderRadius: 6, fontSize: 13 }}>
               {profileMsg}
@@ -292,29 +279,29 @@ function MainContent({ activeTab, upcoming, past, handleCancel, profileForm, set
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <label style={labelStyle}>
-              Full name
+              {t("account.profile.fullName")}
               <input value={profileForm.fullName} onChange={e => setProfileForm(f => ({ ...f, fullName: e.target.value }))} style={inputStyle} />
             </label>
             <label style={labelStyle}>
-              Email
+              {t("account.profile.email")}
               <input value={user.email} disabled style={{ ...inputStyle, opacity: 0.5, cursor: "not-allowed" }} />
             </label>
             <div style={{ borderTop: "0.5px solid #e8e4dc", paddingTop: 16, marginTop: 4 }}>
               <p style={{ fontSize: 12, color: "#a09888", marginBottom: 12 }}>
-                Leave password fields empty if you don't want to change it.
+                {t("account.profile.passwordHint")}
               </p>
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                 <label style={labelStyle}>
-                  Current password
-                  <input type="password" value={profileForm.currentPassword} onChange={e => setProfileForm(f => ({ ...f, currentPassword: e.target.value }))} placeholder="Required to change password" style={inputStyle} />
+                  {t("account.profile.currentPassword")}
+                  <input type="password" value={profileForm.currentPassword} onChange={e => setProfileForm(f => ({ ...f, currentPassword: e.target.value }))} placeholder={t("account.profile.currentPasswordPlaceholder")} style={inputStyle} />
                 </label>
                 <label style={labelStyle}>
-                  New password
-                  <input type="password" value={profileForm.newPassword} onChange={e => setProfileForm(f => ({ ...f, newPassword: e.target.value }))} placeholder="Min. 6 characters" style={inputStyle} />
+                  {t("account.profile.newPassword")}
+                  <input type="password" value={profileForm.newPassword} onChange={e => setProfileForm(f => ({ ...f, newPassword: e.target.value }))} placeholder={t("account.profile.newPasswordPlaceholder")} style={inputStyle} />
                 </label>
                 <label style={labelStyle}>
-                  Confirm new password
-                  <input type="password" value={profileForm.confirmPassword} onChange={e => setProfileForm(f => ({ ...f, confirmPassword: e.target.value }))} placeholder="Repeat new password" style={inputStyle} />
+                  {t("account.profile.confirmPassword")}
+                  <input type="password" value={profileForm.confirmPassword} onChange={e => setProfileForm(f => ({ ...f, confirmPassword: e.target.value }))} placeholder={t("account.profile.confirmPasswordPlaceholder")} style={inputStyle} />
                 </label>
               </div>
             </div>
@@ -326,7 +313,7 @@ function MainContent({ activeTab, upcoming, past, handleCancel, profileForm, set
               color: "#8a6e3e", cursor: "pointer",
               opacity: profileLoading ? 0.7 : 1,
             }}>
-              {profileLoading ? "Saving…" : "Save changes"}
+              {profileLoading ? t("account.profile.saving") : t("account.profile.save")}
             </button>
           </div>
         </div>
@@ -336,6 +323,7 @@ function MainContent({ activeTab, upcoming, past, handleCancel, profileForm, set
 }
 
 function BookingRow({ booking, onCancel, isMobile }) {
+  const { t } = useTranslation();
   const nights = Math.round((new Date(booking.checkOut) - new Date(booking.checkIn)) / 86400000);
   const st = STATUS_STYLES[booking.status] || STATUS_STYLES["reserved"];
 
@@ -351,7 +339,7 @@ function BookingRow({ booking, onCancel, isMobile }) {
     }}>
       <div>
         <div style={{ fontWeight: 500, fontSize: 14, marginBottom: 3 }}>
-          Room {booking.roomId}
+          {t("account.reservations.room")} {booking.roomId}
           {booking.room && (
             <span style={{ fontWeight: 400, color: "#a09888", marginLeft: 6 }}>
               — {booking.room.name}
@@ -359,7 +347,7 @@ function BookingRow({ booking, onCancel, isMobile }) {
           )}
         </div>
         <div style={{ fontSize: 12, color: "#a09888" }}>
-          {booking.checkIn?.slice(0, 10)} → {booking.checkOut?.slice(0, 10)} · {nights} night{nights > 1 ? "s" : ""}
+          {booking.checkIn?.slice(0, 10)} → {booking.checkOut?.slice(0, 10)} · {nights} {nights === 1 ? t("account.reservations.night") : t("account.reservations.nights")}
         </div>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
@@ -370,7 +358,7 @@ function BookingRow({ booking, onCancel, isMobile }) {
           fontSize: 11, padding: "3px 8px", borderRadius: 4,
           background: st.bg, color: st.text,
         }}>
-          {st.label}
+          {t(`account.reservations.status.${booking.status}`)}
         </span>
         {onCancel && (
           <button onClick={() => onCancel(booking.id)} style={{
@@ -379,7 +367,7 @@ function BookingRow({ booking, onCancel, isMobile }) {
             background: "transparent", color: "#c9503a",
             cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
           }}>
-            Cancel
+            {t("account.reservations.cancel")}
           </button>
         )}
       </div>
@@ -399,20 +387,15 @@ function SectionTitle({ children }) {
 }
 
 const cardStyle = {
-  background: "#ffffff",
-  border: "0.5px solid #e8e4dc",
-  borderRadius: 12,
-  padding: "20px 24px",
+  background: "#ffffff", border: "0.5px solid #e8e4dc",
+  borderRadius: 12, padding: "20px 24px",
 };
-
 const labelStyle = {
   display: "flex", flexDirection: "column", gap: 5,
   fontSize: 12, color: "#6b6456",
 };
-
 const inputStyle = {
-  padding: "8px 10px",
-  border: "0.5px solid #e8e4dc",
+  padding: "8px 10px", border: "0.5px solid #e8e4dc",
   borderRadius: 6, fontSize: 13,
   fontFamily: "'DM Sans', sans-serif",
   color: "#1a1814", background: "#faf9f7",

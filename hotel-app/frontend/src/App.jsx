@@ -1,3 +1,4 @@
+import "./i18n";
 import { Routes, Route } from "react-router-dom";
 import Navbar from "./components/shared/Navbar";
 import HomePage from "./pages/HomePage";

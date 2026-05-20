@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
@@ -11,6 +12,7 @@ function useIsMobile() {
 }
 
 export default function Footer() {
+  const { t } = useTranslation();
   const isMobile = useIsMobile();
 
   return (
@@ -28,7 +30,6 @@ export default function Footer() {
         gap: isMobile ? 28 : 48,
         marginBottom: isMobile ? 24 : 40,
       }}>
-
         {/* Brand */}
         <div>
           <span style={{
@@ -40,7 +41,7 @@ export default function Footer() {
             AURELIA
           </span>
           <p style={{ fontSize: 13, lineHeight: 1.7, color: "#6b6456" }}>
-            A boutique hotel offering luxury stays in the heart of the city. Where comfort meets elegance.
+            {t("footer.brand.description")}
           </p>
         </div>
 
@@ -51,12 +52,12 @@ export default function Footer() {
             letterSpacing: "0.1em", textTransform: "uppercase",
             color: "#6b6456", marginBottom: 14,
           }}>
-            Contact
+            {t("footer.contact.title")}
           </h4>
           <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: 13 }}>
             <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
               <span>📍</span>
-              <span style={{ lineHeight: 1.5 }}>12 Luxury Avenue,<br />City Center, 10001</span>
+              <span style={{ lineHeight: 1.5 }}>{t("footer.contact.address")}</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <span>📞</span>
@@ -76,12 +77,12 @@ export default function Footer() {
             letterSpacing: "0.1em", textTransform: "uppercase",
             color: "#6b6456", marginBottom: 14,
           }}>
-            Quick links
+            {t("footer.links.title")}
           </h4>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <a href="/" style={{ fontSize: 13, color: "#a09888", textDecoration: "none" }}>Home</a>
-            <a href="/account" style={{ fontSize: 13, color: "#a09888", textDecoration: "none" }}>My Account</a>
-            <a href="/login" style={{ fontSize: 13, color: "#a09888", textDecoration: "none" }}>Sign in</a>
+            <a href="/" style={{ fontSize: 13, color: "#a09888", textDecoration: "none" }}>{t("footer.links.home")}</a>
+            <a href="/account" style={{ fontSize: 13, color: "#a09888", textDecoration: "none" }}>{t("footer.links.account")}</a>
+            <a href="/login" style={{ fontSize: 13, color: "#a09888", textDecoration: "none" }}>{t("footer.links.signIn")}</a>
           </div>
         </div>
       </div>
@@ -99,7 +100,7 @@ export default function Footer() {
         gap: 12,
       }}>
         <p style={{ fontSize: 12, color: "#3d3830" }}>
-          2026 Aurelia Hotel. All rights reserved.
+          {t("footer.bottom.copyright")}
         </p>
         <div style={{ display: "flex", gap: 20 }}>
           <a href="#" style={{ fontSize: 12, color: "#3d3830", textDecoration: "none" }}>Instagram</a>
